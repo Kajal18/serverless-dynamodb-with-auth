@@ -1,7 +1,7 @@
 # Serverless Dynamodb With Authentication
 
 This project contains serverless secure nodejs api using dynamodb.
-### Prerequistie
+### Prerequisite
 
  - Install serverless CLI and aws CLI
  - Configure aws ClI with IAM role user credentials with AdministrationAccess
