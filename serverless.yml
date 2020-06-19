@@ -1,0 +1,162 @@
+service: dynamodb-table-serverless
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  stage: prod
+  environment:
+    NOTES_TABLE: notes-${opt:stage,self:provider.stage}
+    USERS_TABLE: users-${opt:stage,self:provider.stage}
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:PutItem
+        - dynamodb:DeleteItem
+      Resource:
+        - { "Fn::GetAtt": ["NotesTable", "Arn" ] }
+        - { "Fn::GetAtt": ["UsersTable", "Arn" ] }
+      # Resource: "arn:aws:dynamodb:${opt:region,self:provider.region}:*:table/${self:provider.environment.NOTES_TABLE}"
+
+plugins:
+  - serverless-offline
+
+custom:
+  allowHeaders:
+    - Accept
+    - Content-Type
+    - Content-Length
+    - Authorization
+    - X-Api-Key
+    - app_userId
+    - app_userName
+  serverless-offline:
+    httpPort: 9090
+
+functions:
+  authorize:
+    handler: usersApi/authenticate.handler
+  addNote:
+    handler: api/addNote.handler
+    events:
+      - http:
+          path: note
+          method: post
+          cors:
+            origin: '*'
+            headers: ${self:custom.allowHeaders}
+          authorizer: authorize
+  getNote:
+    handler: api/getNote.handler
+    events:
+      - http:
+          path: note/{note_id}
+          method: get
+          cors:
+            origin: '*'
+            headers: ${self:custom.allowHeaders}
+          authorizer: authorize
+          
+  updateNote:
+    handler: api/updateNote.handler
+    events:
+      - http:
+          path: note/{note_id}
+          method: patch
+          cors:
+            origin: '*'
+            headers: ${self:custom.allowHeaders}
+          authorizer: authorize
+          
+  getNotes:
+    handler: api/getNotes.handler
+    events:
+      - http:
+          path: notes
+          method: get
+          cors:
+            origin: '*'
+            headers: ${self:custom.allowHeaders}
+          authorizer: authorize 
+
+  deleteNote:
+    handler: api/deleteNote.handler
+    events:
+      - http:
+          path: note/t/{timestamp}
+          method: delete
+          cors:
+            origin: '*'
+            headers: ${self:custom.allowHeaders}
+          authorizer: authorize
+            
+  addUser:
+    handler: usersApi/createUser.handler
+    events:
+      - http:
+          path: user
+          method: post
+          cors:
+            origin: '*'
+            headers: ${self:custom.allowHeaders}
+  
+  authentication:
+    handler: usersApi/getToken.handler
+    events:
+      - http:
+          path: authentication
+          method: post
+          cors:
+            origin: '*'
+            headers: ${self:custom.allowHeaders}
+
+resources:
+  Resources:
+    NotesTable:
+      Type: AWS::DynamoDB::Table
+      DeletionPolicy: Retain
+      Properties:
+        TableName: ${self:provider.environment.NOTES_TABLE}
+        AttributeDefinitions:
+          - AttributeName: user_id
+            AttributeType: S
+          - AttributeName: timestamp
+            AttributeType: N
+          - AttributeName: note_id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: user_id
+            KeyType: HASH
+          - AttributeName: timestamp
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        GlobalSecondaryIndexes:
+          - IndexName: note_id-index
+            KeySchema:
+              - AttributeName: note_id
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
+    UsersTable:
+      Type: AWS::DynamoDB::Table
+      DeletionPolicy: Retain
+      Properties:
+        TableName: ${self:provider.environment.USERS_TABLE}
+        AttributeDefinitions:
+          - AttributeName: user_id
+            AttributeType: S
+          - AttributeName: timestamp
+            AttributeType: N
+        KeySchema:
+          - AttributeName: user_id
+            KeyType: HASH
+          - AttributeName: timestamp
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
