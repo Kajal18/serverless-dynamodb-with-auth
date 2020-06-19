@@ -1,0 +1,1 @@
+# serverless-dynamodb-with-auth
