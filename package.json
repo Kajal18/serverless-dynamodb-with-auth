@@ -9,7 +9,7 @@
     "jsonwebtoken": "^8.5.1",
     "lodash": "^4.17.15",
     "moment": "^2.26.0",
-    "serverless-offline": "^6.4.0",
+    "serverless-offline": "^12.0.4",
     "uuid": "^8.1.0"
   },
   "devDependencies": {},
